@@ -1,0 +1,99 @@
+---
+# tasks file for roles/docker-role
+
+- name: Ensure old versions of Docker are not installed.
+  become: true
+  become_method: sudo
+  package:
+    name:
+      - docker
+      - docker-common
+      - docker-engine
+    state: absent
+
+- name: Install docker
+  become: true
+  become_method: sudo
+  shell: "pip install docker"
+  
+- name: Install certain python modules for docker
+  become: true
+  become_method: sudo
+  pip:
+    name: "{{ item.name }}"
+    version: "{{ item.version }}"
+    state: present
+  with_items:
+  - { name: docker, version: 2.0.0 }
+  - { name: docker-py, version: 1.10.6 }
+
+- name: Ensure dependencies are installed.
+  become: true
+  become_method: sudo
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+    state: present
+
+- name: Add Docker apt key.
+  become: true
+  become_method: sudo
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    state: present
+  register: add_repository_key
+  ignore_errors: "{{ docker_apt_ignore_key_error }}"
+
+- name: Add Docker repository.
+  become: true
+  become_method: sudo
+  apt_repository:
+    repo: "{{ docker_apt_repository }}"
+    state: present
+    update_cache: true
+
+#- name: Install Docker.
+ # become: true
+  #become_method: sudo
+  #package:
+  #  name: "{{ docker_package }}"
+  #  state: "{{ docker_package_state }}"
+  #notify: restart docker
+
+- name: Ensure containerd service dir exists.
+  become: true
+  become_method: sudo
+  file:
+    path: /etc/systemd/system/containerd.service.d
+    state: directory
+
+- name: Ensure handlers are notified now to avoid firewall conflicts.
+  become: true
+  become_method: sudo
+  meta: flush_handlers
+#- name: Ensure Docker is started and enabled at boot.
+ # become: true
+ # become_method: sudo
+  #service:
+#    name: docker
+ #   state: "{{ docker_service_state }}"
+  #  enabled: "{{ docker_service_enabled }}"
+
+- name: Ensure docker group is exist
+  become: true
+  become_method: sudo
+  group:
+    name: "docker"
+    state: present
+
+- name: Ensure docker users are added to the docker group.
+  become: true
+  become_method: sudo
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  with_items: "{{ docker_users }}"
+
