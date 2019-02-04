@@ -2,8 +2,6 @@
 # tasks file for roles/docker-role
 
 - name: Ensure old versions of Docker are not installed.
-  become: true
-  become_method: sudo
   package:
     name:
       - docker
